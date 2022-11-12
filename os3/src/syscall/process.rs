@@ -5,6 +5,7 @@ use crate::task::{
     add_current_call_num, exit_current_and_run_next, get_current_task_num, get_current_task_time,
     is_current_task, suspend_current_and_run_next, TaskStatus,
 };
+use crate::timer::get_time;
 use crate::timer::get_time_us;
 
 #[repr(C)]
@@ -14,6 +15,7 @@ pub struct TimeVal {
     pub usec: usize,
 }
 
+#[derive(Clone, Copy)]
 pub struct TaskInfo {
     status: TaskStatus,
     syscall_times: [u32; MAX_SYSCALL_NUM],

@@ -140,19 +140,19 @@ impl TaskManager {
 
     // LAB1: Try to implement your function to update or get task info!
     fn get_current_task_num(&self) -> [u32; MAX_SYSCALL_NUM] {
-        let mut inner = self.inner.exclusive_access();
+        let inner = self.inner.exclusive_access();
         let current = inner.current_task;
         inner.tasks[current].call_num
     }
 
     fn get_current_task_time(&self) -> usize {
-        let mut inner = self.inner.exclusive_access();
+        let inner = self.inner.exclusive_access();
         let current = inner.current_task;
         inner.tasks[current].call_time
     }
 
     fn is_current_task(&self) -> bool {
-        let mut inner = self.inner.exclusive_access();
+        let inner = self.inner.exclusive_access();
         let current = inner.current_task;
         if inner.tasks[current].task_status == TaskStatus::Running {
             true
