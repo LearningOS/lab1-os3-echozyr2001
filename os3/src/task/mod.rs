@@ -17,6 +17,7 @@ mod task;
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
+use crate::timer::get_time_ms;
 use lazy_static::*;
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskInfoInner, TaskStatus};
@@ -69,7 +70,7 @@ lazy_static! {
                 task_status: TaskStatus::UnInit,
                 task_info_inner: TaskInfoInner {
                     syscall_times: [0; MAX_SYSCALL_NUM],
-                    start_time: 0,
+                    start_time: get_time_ms(),
                 }
             })
         }
