@@ -45,7 +45,6 @@ pub struct TaskManager {
 /// The task manager inner in 'UPSafeCell'
 struct TaskManagerInner {
     /// task list
-    // tasks: [TaskControlBlock; MAX_APP_NUM],
     tasks: Vec<TaskControlBlock>,
     /// id of current `Running` task
     current_task: usize,
@@ -55,14 +54,6 @@ lazy_static! {
     /// a `TaskManager` instance through lazy_static!
     pub static ref TASK_MANAGER: TaskManager = {
         let num_app = get_num_app();
-        // let mut tasks = [TaskControlBlock {
-        //     task_cx: TaskContext::zero_init(),
-        //     task_status: TaskStatus::UnInit,
-        //     task_info_inner: TaskInfoInner {
-        //         syscall_times: [0; MAX_SYSCALL_NUM],
-        //         start_time: 0,
-        //     }
-        // }; MAX_APP_NUM];
         let mut tasks: Vec<TaskControlBlock> = Vec::with_capacity(MAX_APP_NUM);
         for _ in 0..MAX_APP_NUM {
             tasks.push(TaskControlBlock {
