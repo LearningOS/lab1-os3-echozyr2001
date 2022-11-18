@@ -17,7 +17,7 @@ const SYSCALL_GET_TIME: usize = 169;
 const SYSCALL_TASK_INFO: usize = 410;
 
 mod fs;
-pub mod process;
+mod process;
 
 use fs::*;
 use process::*;

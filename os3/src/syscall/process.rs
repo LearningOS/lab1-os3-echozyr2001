@@ -4,7 +4,7 @@ use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::task::{
     exit_current_and_run_next, get_task_info, suspend_current_and_run_next, TaskStatus,
 };
-use crate::timer::get_time_us;
+use crate::timer::{get_time, get_time_us};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -13,11 +13,10 @@ pub struct TimeVal {
     pub usec: usize,
 }
 
-// 修改为pub
 pub struct TaskInfo {
-    pub status: TaskStatus,
-    pub syscall_times: [u32; MAX_SYSCALL_NUM],
-    pub time: usize,
+    status: TaskStatus,
+    syscall_times: [u32; MAX_SYSCALL_NUM],
+    time: usize,
 }
 
 /// task exits and submit an exit code
@@ -47,6 +46,13 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
 pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
-    get_task_info(ti);
+    let (syscall_times, start_time) = get_task_info();
+    unsafe {
+        *ti = TaskInfo {
+            status: TaskStatus::Running,
+            syscall_times,
+            time: get_time_us() * 1000 - start_time,
+        }
+    }
     0
 }

@@ -19,13 +19,11 @@ use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
 pub use switch::__switch;
-pub use task::{TaskControlBlock, TaskStatus};
+pub use task::{TaskControlBlock, TaskInfoInner, TaskStatus};
 
 pub use context::TaskContext;
 
-use self::task::TaskInfoInner;
-use crate::syscall::process::TaskInfo;
-use crate::timer::get_time;
+use alloc::vec::Vec;
 
 /// The task manager, where all the tasks are managed.
 ///
@@ -46,7 +44,8 @@ pub struct TaskManager {
 /// The task manager inner in 'UPSafeCell'
 struct TaskManagerInner {
     /// task list
-    tasks: [TaskControlBlock; MAX_APP_NUM],
+    // tasks: [TaskControlBlock; MAX_APP_NUM],
+    tasks: Vec<TaskControlBlock>,
     /// id of current `Running` task
     current_task: usize,
 }
@@ -55,14 +54,25 @@ lazy_static! {
     /// a `TaskManager` instance through lazy_static!
     pub static ref TASK_MANAGER: TaskManager = {
         let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock {
-            task_cx: TaskContext::zero_init(),
-            task_status: TaskStatus::UnInit,
-            task_info_inner: TaskInfoInner {
-                syscall_times: [0;MAX_SYSCALL_NUM],
-                start_time: 0,
-            }
-        }; MAX_APP_NUM];
+        // let mut tasks = [TaskControlBlock {
+        //     task_cx: TaskContext::zero_init(),
+        //     task_status: TaskStatus::UnInit,
+        //     task_info_inner: TaskInfoInner {
+        //         syscall_times: [0; MAX_SYSCALL_NUM],
+        //         start_time: 0,
+        //     }
+        // }; MAX_APP_NUM];
+        let mut tasks: Vec<TaskControlBlock> = Vec::with_capacity(MAX_APP_NUM);
+        for _ in 0..MAX_APP_NUM {
+            tasks.push(TaskControlBlock {
+                task_cx: TaskContext::zero_init(),
+                task_status: TaskStatus::UnInit,
+                task_info_inner: TaskInfoInner {
+                    syscall_times: [0; MAX_SYSCALL_NUM],
+                    start_time: 0,
+                }
+            })
+        }
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));
             t.task_status = TaskStatus::Ready;
@@ -153,21 +163,14 @@ impl TaskManager {
         // 次数加一
     }
 
-    fn get_curent_task_info(&self, ti: *mut TaskInfo) {
+    fn get_current_task_info(&self) -> ([u32; MAX_SYSCALL_NUM], usize) {
         let inner = self.inner.exclusive_access();
         let current_id = inner.current_task;
         let TaskInfoInner {
             syscall_times,
             start_time,
         } = inner.tasks[current_id].task_info_inner;
-
-        unsafe {
-            *ti = TaskInfo {
-                status: TaskStatus::Running,
-                syscall_times,
-                time: get_time() - start_time,
-            }
-        }
+        (syscall_times, start_time)
     }
 }
 
@@ -210,6 +213,6 @@ pub fn record_syscall(syscall_id: usize) {
     TASK_MANAGER.set_syscall_times(syscall_id);
 }
 
-pub fn get_task_info(ti: *mut TaskInfo) {
-    TASK_MANAGER.get_curent_task_info(ti);
+pub fn get_task_info() -> ([u32; MAX_SYSCALL_NUM], usize) {
+    TASK_MANAGER.get_current_task_info()
 }

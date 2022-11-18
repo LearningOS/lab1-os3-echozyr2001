@@ -1,8 +1,8 @@
 //! Types related to task management
 
-use crate::config::MAX_SYSCALL_NUM;
-
 use super::TaskContext;
+
+use crate::task::MAX_SYSCALL_NUM;
 
 // TaskInfo容器
 #[derive(Clone, Copy)]
