@@ -23,6 +23,10 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
+use self::task::TaskInfoInner;
+use crate::syscall::process::TaskInfo;
+use crate::timer::get_time;
+
 /// The task manager, where all the tasks are managed.
 ///
 /// Functions implemented on `TaskManager` deals with all task state transitions
@@ -54,8 +58,10 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
-            call_num: [0; MAX_SYSCALL_NUM],
-            call_time: 0,
+            task_info_inner: TaskInfoInner {
+                syscall_times: [0;MAX_SYSCALL_NUM],
+                start_time: 0,
+            }
         }; MAX_APP_NUM];
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -139,32 +145,29 @@ impl TaskManager {
     }
 
     // LAB1: Try to implement your function to update or get task info!
-    fn get_current_task_num(&self) -> [u32; MAX_SYSCALL_NUM] {
-        let inner = self.inner.exclusive_access();
-        let current = inner.current_task;
-        inner.tasks[current].call_num
-    }
-
-    fn get_current_task_time(&self) -> usize {
-        let inner = self.inner.exclusive_access();
-        let current = inner.current_task;
-        inner.tasks[current].call_time
-    }
-
-    fn is_current_task(&self) -> bool {
-        let inner = self.inner.exclusive_access();
-        let current = inner.current_task;
-        if inner.tasks[current].task_status == TaskStatus::Running {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn add_current_call_num(&self, call_num: usize) {
+    // 实现对TaskInfo的getter和setter
+    fn set_syscall_times(&self, sys_call_id: usize) {
         let mut inner = self.inner.exclusive_access();
-        let current = inner.current_task;
-        inner.tasks[current].call_num[call_num] += 1;
+        let current_id = inner.current_task;
+        inner.tasks[current_id].task_info_inner.syscall_times[sys_call_id] += 1;
+        // 次数加一
+    }
+
+    fn get_curent_task_info(&self, ti: *mut TaskInfo) {
+        let inner = self.inner.exclusive_access();
+        let current_id = inner.current_task;
+        let TaskInfoInner {
+            syscall_times,
+            start_time,
+        } = inner.tasks[current_id].task_info_inner;
+
+        unsafe {
+            *ti = TaskInfo {
+                status: TaskStatus::Running,
+                syscall_times,
+                time: get_time() - start_time,
+            }
+        }
     }
 }
 
@@ -203,18 +206,10 @@ pub fn exit_current_and_run_next() {
 
 // LAB1: Public functions implemented here provide interfaces.
 // You may use TASK_MANAGER member functions to handle requests.
-pub fn get_current_task_num() -> [u32; MAX_SYSCALL_NUM] {
-    TASK_MANAGER.get_current_task_num()
+pub fn record_syscall(syscall_id: usize) {
+    TASK_MANAGER.set_syscall_times(syscall_id);
 }
 
-pub fn get_current_task_time() -> usize {
-    TASK_MANAGER.get_current_task_time()
-}
-
-pub fn is_current_task() -> bool {
-    TASK_MANAGER.is_current_task()
-}
-
-pub fn add_current_call_num(call_num: usize) {
-    TASK_MANAGER.add_current_call_num(call_num);
+pub fn get_task_info(ti: *mut TaskInfo) {
+    TASK_MANAGER.get_curent_task_info(ti);
 }
