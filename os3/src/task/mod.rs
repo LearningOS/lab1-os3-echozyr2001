@@ -201,7 +201,7 @@ pub fn exit_current_and_run_next() {
 
 // LAB1: Public functions implemented here provide interfaces.
 // You may use TASK_MANAGER member functions to handle requests.
-pub fn record_syscall(syscall_id: usize) {
+pub fn set_syscall_times(syscall_id: usize) {
     TASK_MANAGER.set_syscall_times(syscall_id);
 }
 
