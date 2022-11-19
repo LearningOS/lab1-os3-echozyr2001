@@ -17,7 +17,8 @@ mod task;
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
-use crate::timer::get_time_ms;
+use crate::syscall::process::TaskInfo;
+use crate::timer::get_time_us;
 use lazy_static::*;
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskInfoInner, TaskStatus};
@@ -61,7 +62,7 @@ lazy_static! {
                 task_status: TaskStatus::UnInit,
                 task_info_inner: TaskInfoInner {
                     syscall_times: [0; MAX_SYSCALL_NUM],
-                    start_time: get_time_ms(),
+                    start_time: get_time_us() / 1000,
                 }
             })
         }
@@ -155,14 +156,18 @@ impl TaskManager {
         // 次数加一
     }
 
-    fn get_current_task_info(&self) -> ([u32; MAX_SYSCALL_NUM], usize) {
+    fn get_current_task_info(&self) -> TaskInfo {
         let inner = self.inner.exclusive_access();
         let current_id = inner.current_task;
         let TaskInfoInner {
             syscall_times,
             start_time,
         } = inner.tasks[current_id].task_info_inner;
-        (syscall_times, start_time)
+        TaskInfo {
+            status: TaskStatus::Running,
+            syscall_times,
+            time: get_time_us() / 1000 - start_time,
+        }
     }
 }
 
@@ -205,6 +210,6 @@ pub fn set_syscall_times(syscall_id: usize) {
     TASK_MANAGER.set_syscall_times(syscall_id);
 }
 
-pub fn get_task_info() -> ([u32; MAX_SYSCALL_NUM], usize) {
+pub fn get_task_info() -> TaskInfo {
     TASK_MANAGER.get_current_task_info()
 }
